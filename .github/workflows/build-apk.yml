@@ -1,5 +1,10 @@
 name: Build APK
 
+# Builds a release APK on every push to main and on version tags.
+# - Every run: the APK is attached as a downloadable build artifact
+#   (Actions tab -> the run -> Artifacts).
+# - Tag pushes like "v1.0.0": the APK is also attached to a GitHub
+#   Release automatically.
 on:
   push:
     branches: [ "main" ]
@@ -31,7 +36,22 @@ jobs:
           cache: true
 
       - name: Scaffold platform folders (android/ios) if missing
+        # This repo ships lib/ + pubspec.yaml only. `flutter create .` fills
+        # in the platform-specific folders (Gradle wrapper, manifests, etc.)
+        # from the installed Flutter version's own template without
+        # touching existing Dart code. Safe to re-run on every build.
         run: flutter create --platforms=android --org com.inspectionrover .
+
+      - name: Allow cleartext (ws://) traffic for the local ESP32 connection
+        # The generated manifest is fresh every run (see step above), so
+        # this can't be a one-time manual edit — it has to be reapplied
+        # here every time. Without it, Android blocks the app's plain
+        # ws:// connection to the rover's AP by default (API 28+), and the
+        # "Connect" button just hangs on "connecting" forever with nothing
+        # ever reaching the ESP32.
+        run: |
+          sed -i 's/<application/<application\n        android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
+          grep -n "usesCleartextTraffic" android/app/src/main/AndroidManifest.xml
 
       - name: Install dependencies
         run: flutter pub get

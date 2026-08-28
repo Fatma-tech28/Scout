@@ -83,8 +83,16 @@ class WebSocketCarConnectionService implements CarConnectionService {
       // WebSocketChannel.connect doesn't await the handshake itself;
       // `ready` completes once the connection is actually established
       // (or throws if it fails), so callers awaiting connect() get an
-      // accurate result instead of a false "connected".
-      await channel.ready;
+      // accurate result instead of a false "connected". Bounded with a
+      // timeout so a connection that's silently dropped (rather than
+      // actively refused — e.g. a firewall, or a server that accepts
+      // the TCP connection but never completes the HTTP upgrade) fails
+      // fast and retries instead of leaving the UI stuck on
+      // "connecting"/"reconnecting" indefinitely with no feedback.
+      await channel.ready.timeout(
+        const Duration(seconds: 6),
+        onTimeout: () => throw TimeoutException('WebSocket handshake timed out'),
+      );
 
       _reconnectAttempt = 0;
       _connectionController.add(true);

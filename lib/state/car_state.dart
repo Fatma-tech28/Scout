@@ -306,12 +306,7 @@ class CarState extends ChangeNotifier {
     }
 
     // --- Ultrasonic obstacle routine (unchanged; header chip only) ---
-    final drivingForward = _status.phase == NavPhase.driving &&
-        (_status.mode == DriveMode.auto || _heldCommand == DriveCommand.forward);
-
-    if (!_flameEscapeActive && !_sequenceBusy && drivingForward && snap.ultrasonicCm <= obstacleThresholdCm) {
-      _runObstacleSequence();
-    }
+    
 
     notifyListeners();
   }
